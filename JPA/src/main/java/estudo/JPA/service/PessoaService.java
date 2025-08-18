@@ -1,19 +1,23 @@
 package estudo.JPA.service;
 
-import estudo.JPA.domain.entity.Pessoa;
-import estudo.JPA.domain.repository.PessoaRepository;
+import estudo.JPA.adapter.entrypoint.mapper.PessoaMapper;
+import estudo.JPA.adapter.jpa.entity.PessoaEntity;
+import estudo.JPA.adapter.jpa.repository.PessoaRepository;
+import estudo.JPA.entity.Pessoa;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class PessoaService {
 
     private final PessoaRepository pessoaRepository;
+    private final PessoaMapper pessoaMapper;
 
     // Métodos para validação
     private void validarEmail(String email) {
@@ -38,23 +42,28 @@ public class PessoaService {
         // Aplica as validações antes de salvar
         validarEmail(pessoa.getEmail());
         validarTelefone(pessoa.getTelefone());
-        return pessoaRepository.save(pessoa);
+        PessoaEntity pessoaEntity = pessoaMapper.toEntity(pessoa);
+        PessoaEntity savedEntity = pessoaRepository.save(pessoaEntity);
+        return pessoaMapper.toDomain(savedEntity);
     }
 
     // Método para listar todas as pessoas
     public List<Pessoa> listarTodos() {
-        return pessoaRepository.findAll();
+        return pessoaRepository.findAll().stream()
+                .map(pessoaMapper::toDomain)
+                .collect(Collectors.toList());
     }
 
     // Método para buscar uma pessoa por ID
     public Optional<Pessoa> buscarPorId(Long id) {
-        return pessoaRepository.findById(id);
+        return pessoaRepository.findById(id)
+                .map(pessoaMapper::toDomain);
     }
 
     // Método para atualizar telefone e e-mail
     public Pessoa atualizar(Long id, String novoTelefone, String novoEmail) {
         // Busca a pessoa pelo ID. Se não encontrar, lança uma exceção.
-        Pessoa pessoa = pessoaRepository.findById(id)
+        PessoaEntity pessoaEntity = pessoaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Pessoa com o ID " + id + " não encontrada."));
 
         // Aplica as validações nos novos dados
@@ -62,11 +71,12 @@ public class PessoaService {
         validarTelefone(novoTelefone);
 
         // Atualiza os dados
-        pessoa.setTelefone(novoTelefone);
-        pessoa.setEmail(novoEmail);
+        pessoaEntity.setTelefone(novoTelefone);
+        pessoaEntity.setEmail(novoEmail);
 
         // Salva a pessoa com os dados atualizados
-        return pessoaRepository.save(pessoa);
+        PessoaEntity updatedEntity = pessoaRepository.save(pessoaEntity);
+        return pessoaMapper.toDomain(updatedEntity);
     }
 
     // Método para deletar uma pessoa por ID

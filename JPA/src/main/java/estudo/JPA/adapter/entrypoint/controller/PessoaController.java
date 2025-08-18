@@ -1,6 +1,10 @@
-package estudo.JPA.controller;
+package estudo.JPA.adapter.entrypoint.controller;
 
-import estudo.JPA.domain.entity.Pessoa;
+import estudo.JPA.adapter.entrypoint.controller.dto.PessoaAtualizarDto;
+import estudo.JPA.adapter.entrypoint.mapper.PessoaMapper;
+import estudo.JPA.adapter.entrypoint.request.PessoaRequest;
+import estudo.JPA.adapter.entrypoint.response.PessoaResponse;
+import estudo.JPA.entity.Pessoa;
 import estudo.JPA.service.PessoaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -8,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/pessoas")
@@ -15,16 +20,16 @@ import java.util.List;
 public class PessoaController {
 
     private final PessoaService pessoaService;
-
-    // Record para receber os dados de atualização
-    record PessoaAtualizarDto(String novoTelefone, String novoEmail) {}
+    private final PessoaMapper pessoaMapper;
 
     // Endpoint para salvar uma nova pessoa (CREATE)
     @PostMapping
-    public ResponseEntity<?> salvar(@RequestBody Pessoa pessoa) {
+    public ResponseEntity<?> salvar(@RequestBody PessoaRequest pessoaRequest) {
         try {
+            Pessoa pessoa = pessoaMapper.toDomain(pessoaRequest);
             Pessoa novaPessoa = pessoaService.salvar(pessoa);
-            return ResponseEntity.status(HttpStatus.CREATED).body(novaPessoa);
+            PessoaResponse pessoaResponse = pessoaMapper.toResponse(novaPessoa);
+            return ResponseEntity.status(HttpStatus.CREATED).body(pessoaResponse);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
@@ -32,15 +37,19 @@ public class PessoaController {
 
     // Endpoint para listar todas as pessoas (READ)
     @GetMapping
-    public ResponseEntity<List<Pessoa>> listarTodos() {
+    public ResponseEntity<List<PessoaResponse>> listarTodos() {
         List<Pessoa> pessoas = pessoaService.listarTodos();
-        return ResponseEntity.ok(pessoas);
+        List<PessoaResponse> response = pessoas.stream()
+                .map(pessoaMapper::toResponse)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 
     // Endpoint para buscar uma pessoa por ID (READ)
     @GetMapping("/{id}")
-    public ResponseEntity<?> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<PessoaResponse> buscarPorId(@PathVariable Long id) {
         return pessoaService.buscarPorId(id)
+                .map(pessoaMapper::toResponse)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -50,7 +59,8 @@ public class PessoaController {
     public ResponseEntity<?> atualizar(@PathVariable Long id, @RequestBody PessoaAtualizarDto dto) {
         try {
             Pessoa pessoaAtualizada = pessoaService.atualizar(id, dto.novoTelefone(), dto.novoEmail());
-            return ResponseEntity.ok(pessoaAtualizada);
+            PessoaResponse response = pessoaMapper.toResponse(pessoaAtualizada);
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
