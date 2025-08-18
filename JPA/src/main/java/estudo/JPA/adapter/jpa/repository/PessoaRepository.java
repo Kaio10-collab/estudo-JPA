@@ -1,11 +1,11 @@
-package estudo.JPA.domain.repository;
+package estudo.JPA.adapter.jpa.repository;
 
-import estudo.JPA.domain.entity.Pessoa;
+import estudo.JPA.adapter.jpa.entity.PessoaEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface PessoaRepository extends JpaRepository<Pessoa, Long> {
+public interface PessoaRepository extends JpaRepository<PessoaEntity, Long> {
 
     /*
     Os tipos dentro dos sinais de > (conhecidos como generics) são essenciais:
